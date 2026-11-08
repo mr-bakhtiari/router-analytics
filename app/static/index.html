@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light"><title>L009 Traffic Analytics</title>
+  <link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/device.css">
+</head>
+<body>
+  <div id="auth" class="auth hidden">
+    <form id="authForm" class="panel auth-card">
+      <div class="brand-mark">L9</div><h1 id="authTitle">Traffic Analytics</h1>
+      <p id="authHint" class="muted">Sign in to your local dashboard</p>
+      <label>Username<input id="username" autocomplete="username" value="admin" required></label>
+      <label>Password<input id="password" type="password" autocomplete="current-password" minlength="12" required></label>
+      <button type="submit">Continue</button><p id="authError" class="error"></p>
+    </form>
+  </div>
+  <div id="app" class="shell hidden">
+    <aside>
+      <div class="brand"><span class="brand-mark">L9</span><span><b>Traffic</b><small>Analytics</small></span></div>
+      <nav>
+        <button data-page="overview" class="active">Overview</button><button data-page="interfaces">Interfaces</button>
+        <button data-page="devices">Devices</button><button data-page="analytics">Analytics</button>
+        <button data-page="health">Router Health</button><button data-page="settings">Settings</button>
+      </nav><div class="aside-foot"><span id="collectorDot" class="dot"></span><span id="collectorText">Collector</span></div>
+    </aside>
+    <main>
+      <header><div><h1 id="pageTitle">Overview</h1><p id="lastUpdate" class="muted">Waiting for data…</p></div>
+        <div class="header-actions"><button id="theme" class="icon-btn" title="Toggle theme">◐</button><button id="logout" class="ghost">Log out</button></div>
+      </header>
+      <section id="overview" class="page active">
+        <div class="cards" id="overviewCards"></div>
+        <div class="grid two"><article class="panel"><div class="panel-head"><h2>Live throughput</h2><select id="overviewInterface"></select></div><canvas id="liveChart" height="250"></canvas></article>
+          <article class="panel"><h2>WAN state</h2><div id="wanState"></div><p class="note">Reachability uses active recursive default routes; link state is shown separately.</p></article></div>
+        <article class="panel"><h2>Interface activity</h2><div id="topInterfaces" class="bar-list"></div></article>
+      </section>
+      <section id="interfaces" class="page"><div id="interfaceGrid" class="cards interfaces"></div><article class="panel"><div class="panel-head"><h2 id="interfaceChartTitle">Interface history</h2><select id="interfaceSelect"></select></div><canvas id="interfaceChart" height="280"></canvas></article></section>
+      <section id="devices" class="page">
+        <article class="panel"><div class="device-filters"><label>Quick range<select id="deviceQuick"><option value="1">Last hour</option><option value="6">Last 6 hours</option><option value="24" selected>Last 24 hours</option><option value="72">Last 3 days</option><option value="168">Last 7 days</option></select></label><label>Start<input id="deviceStart" type="datetime-local"></label><label>End<input id="deviceEnd" type="datetime-local"></label><button id="applyDevices">Apply</button><button id="deviceExport" class="ghost" disabled>Export selected CSV</button></div><p id="deviceLimit" class="note"></p></article>
+        <article class="panel"><div class="panel-head"><div><h2>Observed devices</h2><span id="flowStatus" class="muted">Waiting for IPFIX…</span></div><input id="deviceSearch" placeholder="Search IP, MAC, hostname…"></div><div class="table-wrap"><table><thead><tr><th>IP / Hostname</th><th>MAC</th><th>Interface</th><th>Status</th><th>Upload</th><th>Download</th><th>Total</th><th>Last seen</th></tr></thead><tbody id="deviceRows"></tbody></table></div></article>
+        <div id="deviceDetail" class="hidden"><article class="panel"><div class="panel-head"><h2 id="deviceChartTitle">Device history</h2><select id="deviceBucket"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="3600">1 hour</option><option value="86400">1 day</option></select></div><canvas id="deviceChart" height="300"></canvas><div id="deviceTotals" class="summary"></div></article><article class="panel"><h2>Ports and protocols</h2><div class="table-wrap"><table><thead><tr><th>Port</th><th>Service</th><th>Protocol</th><th>Scope</th><th>Upload</th><th>Download</th><th>Total</th><th>Flows</th></tr></thead><tbody id="portRows"></tbody></table></div></article></div>
+      </section>
+      <section id="analytics" class="page"><article class="panel"><div class="filters"><label>Interface<select id="analyticsInterface"></select></label><label>Start<input id="startDate" type="datetime-local"></label><label>End<input id="endDate" type="datetime-local"></label><label>Interval<select id="bucket"><option value="60">1 minute</option><option value="300">5 minutes</option><option value="3600">1 hour</option><option value="86400">1 day</option></select></label><button id="applyRange">Apply</button><button id="exportCsv" class="ghost">Export CSV</button></div></article><article class="panel"><canvas id="analyticsChart" height="320"></canvas><div id="analyticsTotals" class="summary"></div></article></section>
+      <section id="health" class="page"><div id="healthCards" class="cards"></div><div class="grid two"><article class="panel"><h2>Collector</h2><dl id="collectorDetails"></dl></article><article class="panel"><h2>Database & storage</h2><dl id="storageDetails"></dl></article></div><article class="panel"><h2>Recent monitoring errors</h2><div id="events"></div></article></section>
+      <section id="settings" class="page"><div class="grid two"><form id="settingsForm" class="panel"><h2>Collection & retention</h2><label>Interface interval (seconds)<input name="collect_interval" type="number" min="5" max="60"></label><label>Health interval (seconds)<input name="health_interval" type="number" min="15" max="300"></label><label>Interface raw retention (days)<input name="raw_retention_days" type="number" min="1" max="30"></label><label>Interface hourly retention (days)<input name="hourly_retention_days" type="number" min="7" max="365"></label><label>Interface daily retention (days)<input name="daily_retention_days" type="number" min="30" max="730"></label><label>Device minute retention (days)<input name="device_minute_retention_days" type="number" min="1" max="14"></label><label>Device hourly retention (days)<input name="device_hourly_retention_days" type="number" min="7" max="365"></label><label>Device daily retention (days)<input name="device_daily_retention_days" type="number" min="30" max="730"></label><button>Save settings</button><p id="settingsMessage"></p></form><form id="passwordForm" class="panel"><h2>Change administrator password</h2><label>Current password<input name="current" type="password" required></label><label>New password<input name="new" type="password" minlength="12" required></label><button>Change password</button><p class="note">Changing the password signs out every session.</p><p id="passwordMessage"></p></form></div></section>
+    </main>
+  </div><script src="/app.js?v=1.1.5" defer></script>
+</body></html>

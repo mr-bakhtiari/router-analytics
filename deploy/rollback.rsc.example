@@ -1,0 +1,16 @@
+# Stops only objects created by deploy/routeros-deploy.rsc.example.
+# Historical files on USB are deliberately retained.
+/ip/traffic-flow/set enabled=no
+/ip/traffic-flow/target/remove [find where dst-address=172.30.0.2 and port=2055]
+/container/stop [find where name="router-analytics"]
+:delay 5s
+/container/remove [find where name="router-analytics"]
+/container/mounts/remove [find where list="analytics-mounts"]
+/container/envs/remove [find where list="analytics-env"]
+/ip/firewall/nat/remove [find where comment="ANALYTICS-LAN-HTTPS"]
+/interface/bridge/port/remove [find where comment="ANALYTICS veth membership"]
+/interface/veth/remove [find where name="analytics-veth"]
+/ip/address/remove [find where comment="ANALYTICS container gateway"]
+/interface/bridge/remove [find where name="analytics-br"]
+/user/remove [find where name="traffic-monitor"]
+/user/group/remove [find where name="traffic-monitor"]

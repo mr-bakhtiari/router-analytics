@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+data
+certs
+deploy
+tests
+*.db*
+*.backup
+*.rsc
+*.npk
+*.tar
+*.zip

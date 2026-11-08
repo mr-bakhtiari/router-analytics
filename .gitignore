@@ -1,0 +1,36 @@
+# Runtime data and databases
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Router exports, backups, images and packages
+*.backup
+*.rsc
+!*.rsc.example
+*.npk
+*.tar
+*.zip
+
+# Credentials and private certificates
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+certs/
+deploy/private/
+
+# Python, editors and operating systems
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

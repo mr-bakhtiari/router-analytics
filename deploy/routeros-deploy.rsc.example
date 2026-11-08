@@ -1,0 +1,44 @@
+# REVIEW EVERY PLACEHOLDER BEFORE IMPORTING THIS FILE.
+# This example assumes an ext4 USB partition mounted as usb1-part1.
+# Upload router-analytics-arm.tar to usb1-part1/images/ first.
+
+/user/group/add name=traffic-monitor policy=read,api comment="ANALYTICS least-privilege API group"
+/user/add name=traffic-monitor group=traffic-monitor address=172.30.0.2/32 password="__COLLECTOR_PASSWORD__" comment="ANALYTICS collector account"
+
+/interface/bridge/add name=analytics-br protocol-mode=none comment="ANALYTICS isolated container bridge"
+/ip/address/add address=172.30.0.1/30 interface=analytics-br comment="ANALYTICS container gateway"
+/interface/veth/add name=analytics-veth address=172.30.0.2/30 gateway=172.30.0.1 comment="ANALYTICS dashboard veth"
+/interface/bridge/port/add bridge=analytics-br interface=analytics-veth comment="ANALYTICS veth membership"
+
+/ip/firewall/nat/add chain=dstnat action=dst-nat protocol=tcp dst-address-type=local dst-port=8443 in-interface-list=LAN src-address=__TRUSTED_LAN_CIDR__ to-addresses=172.30.0.2 to-ports=8443 comment="ANALYTICS-LAN-HTTPS"
+
+/container/envs/add list=analytics-env key=DATA_DIR value=/data
+/container/envs/add list=analytics-env key=LISTEN_HOST value=0.0.0.0
+/container/envs/add list=analytics-env key=LISTEN_PORT value=8443
+/container/envs/add list=analytics-env key=ROUTER_HOST value=172.30.0.1
+/container/envs/add list=analytics-env key=ROUTER_PORT value=8728
+/container/envs/add list=analytics-env key=ROUTER_USER value=traffic-monitor
+/container/envs/add list=analytics-env key=ROUTER_PASSWORD value="__COLLECTOR_PASSWORD__"
+/container/envs/add list=analytics-env key=COOKIE_SECURE value=true
+/container/envs/add list=analytics-env key=TLS_CERT value=/certs/server.crt
+/container/envs/add list=analytics-env key=TLS_KEY value=/certs/server.key
+/container/envs/add list=analytics-env key=MONITORED_INTERFACES value="__MONITORED_INTERFACES__"
+/container/envs/add list=analytics-env key=WAN_INTERFACES value="__WAN_INTERFACES__"
+/container/envs/add list=analytics-env key=LAN_NETWORKS value="__LAN_NETWORKS__"
+/container/envs/add list=analytics-env key=ROUTER_LAN_IPS value="__ROUTER_LAN_IPS__"
+/container/envs/add list=analytics-env key=WAN_ROUTE_COMMENTS value="__WAN_ROUTE_COMMENTS__"
+
+/container/mounts/add list=analytics-mounts src=usb1-part1/analytics-data dst=/data
+/container/mounts/add list=analytics-mounts src=usb1-part1/analytics-certs dst=/certs
+/container/config/set tmpdir=usb1-part1/container-tmp
+/container/add file=usb1-part1/images/router-analytics-arm.tar interface=analytics-veth root-dir=usb1-part1/containers/router-analytics mountlists=analytics-mounts envlist=analytics-env name=router-analytics entrypoint=python3 cmd=/app/app.py start-on-boot=yes logging=yes comment="Router Analytics"
+/container/set [find where name="router-analytics"] memory-high=100M memory-max=140M restart-policy=on-failure restart-interval=10s restart-max-count=5
+
+# The values below must match MONITORED_INTERFACES and the internal collector address.
+/ip/traffic-flow/set enabled=no interfaces=__MONITORED_INTERFACES__ cache-entries=4k active-flow-timeout=1m inactive-flow-timeout=15s packet-sampling=no
+/ip/traffic-flow/ipfix/set packets=yes bytes=yes src-port=yes dst-port=yes in-interface=yes out-interface=yes protocol=yes src-address=yes dst-address=yes nat-src-address=yes nat-dst-address=yes nat-src-port=yes nat-dst-port=yes
+/ip/traffic-flow/target/add src-address=172.30.0.1 dst-address=172.30.0.2 port=2055 version=ipfix v9-template-refresh=20 v9-template-timeout=1m
+/ip/traffic-flow/set enabled=yes
+
+# Wait until extraction finishes, then run:
+# /container/start [find where name="router-analytics"]

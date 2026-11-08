@@ -1,0 +1,16 @@
+.ok-text { color: var(--green); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.device-filters {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1.4fr auto auto;
+  gap: 12px;
+  align-items: end;
+}
+.device-filters label { margin: 0; }
+.panel-head div h2 { margin-bottom: 2px; }
+.device-row { cursor: pointer; }
+.device-row:hover, .device-row.selected { background: #2563eb12; }
+.device-row.selected { box-shadow: inset 3px 0 var(--accent); }
+.device-row td:first-child small { display: block; color: var(--muted); }
+@media (max-width: 1050px) { .device-filters { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 720px) { .device-filters { grid-template-columns: 1fr; } }

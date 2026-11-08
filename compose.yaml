@@ -1,0 +1,12 @@
+services:
+  dashboard:
+    build: .
+    env_file: .env
+    ports:
+      - "8080:8080/tcp"
+      - "2055:2055/udp"
+    volumes:
+      - ./data:/data
+      - ./certs:/certs:ro
+    restart: unless-stopped
+    mem_limit: 140m
