@@ -2,7 +2,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const state={csrf:'',interfaces:[],live:[],selected:'',setup:false,devices:[],selectedDevice:''};
 const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const fmtBytes=n=>{n=Number(n||0);const u=['B','KB','MB','GB','TB'];let i=0;while(n>=1000&&i<u.length-1){n/=1000;i++}return `${n.toFixed(i?2:0)} ${u[i]}`};
-const fmtRate=n=>{n=Number(n||0);const u=['bps','Kbps','Mbps','Gbps'];let i=0;while(n>=1000&&i<u.length-1){n/=1000;i++}return `${n.toFixed(i?2:0)} ${u[i]}`};
+const fmtRate=n=>{n=Number(n||0)/8;const u=['B/s','KB/s','MB/s','GB/s','TB/s'];let i=0;while(n>=1000&&i<u.length-1){n/=1000;i++}return `${n.toFixed(i?2:0)} ${u[i]}`};
 const fmtTime=t=>t?new Date(t*1000).toLocaleString():'—';
 async function api(path,opts={}){opts.headers={...(opts.headers||{}),'Content-Type':'application/json'};if(state.csrf)opts.headers['X-CSRF-Token']=state.csrf;const r=await fetch(path,opts);if(r.status===401){showAuth(false);throw Error('Authentication required')}if(!r.ok){let e={};try{e=await r.json()}catch{}throw Error(e.error||`Request failed (${r.status})`)}return r.status===204?null:r.json()}
 function showAuth(setup){state.setup=setup;$('#app').classList.add('hidden');$('#auth').classList.remove('hidden');$('#authTitle').textContent=setup?'Set up administrator':'Traffic Analytics';$('#authHint').textContent=setup?'Create the dashboard login. This is separate from RouterOS.':'Sign in to your local dashboard';$('#username').value='admin'}

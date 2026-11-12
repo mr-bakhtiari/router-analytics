@@ -93,12 +93,12 @@ docker compose logs -f dashboard
 
 ```bash
 # نمونه برای ARM 32-bit
-docker buildx build --platform linux/arm/v7 -t router-analytics:1.1.6 --load .
-docker save router-analytics:1.1.6 -o router-analytics-arm.tar
+docker buildx build --platform linux/arm/v7 -t router-analytics:1.1.7 --load .
+docker save router-analytics:1.1.7 -o router-analytics-arm.tar
 
 # نمونه برای ARM64
-docker buildx build --platform linux/arm64 -t router-analytics:1.1.6 --load .
-docker save router-analytics:1.1.6 -o router-analytics-arm64.tar
+docker buildx build --platform linux/arm64 -t router-analytics:1.1.7 --load .
+docker save router-analytics:1.1.7 -o router-analytics-arm64.tar
 ```
 
 RouterOS باید بتواند archive تولیدشده را import کند. اگر نسخهٔ RouterOS شما archive ساخته‌شده با لایه‌های فشرده را نمی‌پذیرد، از Docker legacy save با لایه‌های uncompressed استفاده کنید.

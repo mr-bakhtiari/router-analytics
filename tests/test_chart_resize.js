@@ -7,6 +7,14 @@ const drawChartSource = source.match(/function drawChart\([\s\S]+?(?=\nfunction 
 assert.ok(drawChartSource, 'drawChart function was not found');
 const internetTotalsSource = source.match(/function internetTotals\([^\n]+/)?.[0];
 assert.ok(internetTotalsSource, 'internetTotals function was not found');
+const fmtRateSource = source.match(/const fmtRate=[^\n]+/)?.[0];
+assert.ok(fmtRateSource, 'fmtRate function was not found');
+
+const rateContext = {};
+vm.createContext(rateContext);
+vm.runInContext(`${fmtRateSource};this.formatRateForTest=fmtRate`, rateContext);
+assert.equal(rateContext.formatRateForTest(80_000_000), '10.00 MB/s');
+assert.equal(rateContext.formatRateForTest(8_000), '1.00 KB/s');
 
 const context = {
   devicePixelRatio: 1.25,
@@ -46,4 +54,4 @@ for (let iteration = 0; iteration < 20; iteration += 1) {
   assert.equal(canvas.dataset.logicalHeight, '250');
 }
 
-console.log('chart height remains stable across repeated high-DPI redraws');
+console.log('chart height and byte-per-second formatting tests passed');
