@@ -27,6 +27,21 @@ spec.loader.exec_module(app)
 FIELDS = [(8, 4), (12, 4), (7, 2), (11, 2), (4, 1), (1, 8), (2, 8)]
 
 
+class InterfaceDirectionTests(unittest.TestCase):
+    def test_wan_and_lan_are_normalized_to_download_and_upload(self):
+        wan = app.normalize_interface_row({"name": "wan1", "rx_bytes": 700, "tx_bytes": 100,
+            "rx_bps": 70, "tx_bps": 10, "peak_rx_bps": 90, "peak_tx_bps": 20})
+        lan = app.normalize_interface_row({"name": "lan1", "rx_bytes": 100, "tx_bytes": 700,
+            "rx_bps": 10, "tx_bps": 70, "peak_rx_bps": 20, "peak_tx_bps": 90})
+        for row in (wan, lan):
+            self.assertEqual(700, row["download_bytes"])
+            self.assertEqual(100, row["upload_bytes"])
+            self.assertEqual(70, row["download_bps"])
+            self.assertEqual(10, row["upload_bps"])
+            self.assertEqual(90, row["peak_download_bps"])
+            self.assertEqual(20, row["peak_upload_bps"])
+
+
 def message(sets, export_time):
     body = b"".join(sets)
     return struct.pack(">HHIII", 10, 16 + len(body), export_time, 1, 77) + body

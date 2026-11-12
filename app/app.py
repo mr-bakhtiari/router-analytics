@@ -28,7 +28,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-APP_VERSION = "1.1.5"
+APP_VERSION = "1.1.6"
 APP_DIR = Path(__file__).resolve().parent
 STATIC_DIR = APP_DIR / "static"
 DATA_DIR = Path(os.getenv("DATA_DIR", "/data"))
@@ -345,6 +345,27 @@ def local_interface(address: str) -> str:
         if ip in network:
             return interface
     return ""
+
+
+def normalize_interface_row(row: dict[str, Any], name: str | None = None) -> dict[str, Any]:
+    """Add user-facing directions without losing the raw RouterOS RX/TX values."""
+    interface_name = name or str(row.get("name", ""))
+    is_wan = interface_name in WAN
+    row["role"] = "wan" if is_wan else "lan"
+    directions = {
+        "download_bps": "rx_bps" if is_wan else "tx_bps",
+        "upload_bps": "tx_bps" if is_wan else "rx_bps",
+        "download_bytes": "rx_bytes" if is_wan else "tx_bytes",
+        "upload_bytes": "tx_bytes" if is_wan else "rx_bytes",
+        "download_delta": "rx_delta" if is_wan else "tx_delta",
+        "upload_delta": "tx_delta" if is_wan else "rx_delta",
+        "peak_download_bps": "peak_rx_bps" if is_wan else "peak_tx_bps",
+        "peak_upload_bps": "peak_tx_bps" if is_wan else "peak_rx_bps",
+    }
+    for target, source in directions.items():
+        if source in row:
+            row[target] = row[source]
+    return row
 
 
 def protocol_name(number: int) -> str:
@@ -973,7 +994,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def api_overview(self) -> None:
         conn = DB.conn()
-        latest = [dict(r) for r in conn.execute("""SELECT s.* FROM interface_samples s JOIN
+        latest = [normalize_interface_row(dict(r)) for r in conn.execute("""SELECT s.* FROM interface_samples s JOIN
             (SELECT name,MAX(ts) ts FROM interface_samples GROUP BY name) x ON x.name=s.name AND x.ts=s.ts ORDER BY s.name""")]
         health = conn.execute("SELECT * FROM health_samples ORDER BY ts DESC LIMIT 1").fetchone()
         routes = []
@@ -995,12 +1016,8 @@ class Handler(SimpleHTTPRequestHandler):
             "active_wan": active, "collector": self.collector_status(), "db_bytes": DB_PATH.stat().st_size if DB_PATH.exists() else 0})
 
     def api_interfaces(self) -> None:
-        rows = [dict(r) for r in DB.conn().execute("""SELECT s.* FROM interface_samples s JOIN
+        rows = [normalize_interface_row(dict(r)) for r in DB.conn().execute("""SELECT s.* FROM interface_samples s JOIN
             (SELECT name,MAX(ts) ts FROM interface_samples GROUP BY name) x ON x.name=s.name AND x.ts=s.ts ORDER BY s.name""")]
-        for row in rows:
-            row["role"] = "wan" if row["name"] in WAN else "lan"
-            row["upload_bps"] = row["tx_bps"] if row["name"] in WAN else row["rx_bps"]
-            row["download_bps"] = row["rx_bps"] if row["name"] in WAN else row["tx_bps"]
         return self.respond_json({"interfaces": rows})
 
     def api_history(self, params: dict[str, list[str]]) -> None:
@@ -1012,7 +1029,7 @@ class Handler(SimpleHTTPRequestHandler):
         if end <= start or end - start > 366 * 86400:
             return self.respond_json({"error": "invalid date range"}, 400)
         bucket = max(5, min(86400, parse_int(params.get("bucket", [60])[0], 60)))
-        rows = [dict(r) for r in DB.conn().execute("""SELECT (ts/?)*? bucket,SUM(rx_delta) rx_bytes,
+        rows = [normalize_interface_row(dict(r), name) for r in DB.conn().execute("""SELECT (ts/?)*? bucket,SUM(rx_delta) rx_bytes,
             SUM(tx_delta) tx_bytes,AVG(rx_bps) rx_bps,AVG(tx_bps) tx_bps,MAX(rx_bps) peak_rx_bps,
             MAX(tx_bps) peak_tx_bps FROM interface_samples WHERE name=? AND ts>=? AND ts<=?
             GROUP BY bucket ORDER BY bucket""", (bucket, bucket, name, start, end))]
@@ -1161,10 +1178,15 @@ class Handler(SimpleHTTPRequestHandler):
         end, start = parse_int(params.get("end", [now_ts()])[0]), parse_int(params.get("start", [now_ts()-86400])[0])
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["timestamp_utc", "interface", "running", "rx_bytes_total", "tx_bytes_total", "rx_bytes_delta", "tx_bytes_delta", "rx_bps", "tx_bps", "counter_reset"])
+        writer.writerow(["timestamp_utc", "interface", "role", "running", "rx_bytes_total", "tx_bytes_total",
+                         "rx_bytes_delta", "tx_bytes_delta", "rx_bps", "tx_bps", "download_bytes_delta",
+                         "upload_bytes_delta", "download_bps", "upload_bps", "counter_reset"])
         for row in DB.conn().execute("SELECT * FROM interface_samples WHERE name=? AND ts BETWEEN ? AND ? ORDER BY ts", (name, start, end)):
-            writer.writerow([datetime.fromtimestamp(row["ts"], timezone.utc).isoformat(), row["name"], row["running"],
-                row["rx_bytes"], row["tx_bytes"], row["rx_delta"], row["tx_delta"], row["rx_bps"], row["tx_bps"], row["reset"]])
+            item = normalize_interface_row(dict(row))
+            writer.writerow([datetime.fromtimestamp(item["ts"], timezone.utc).isoformat(), item["name"], item["role"],
+                item["running"], item["rx_bytes"], item["tx_bytes"], item["rx_delta"], item["tx_delta"],
+                item["rx_bps"], item["tx_bps"], item["download_delta"], item["upload_delta"],
+                item["download_bps"], item["upload_bps"], item["reset"]])
         raw = output.getvalue().encode()
         self.send_response(200)
         self.send_header("Content-Type", "text/csv; charset=utf-8")

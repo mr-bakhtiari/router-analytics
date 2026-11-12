@@ -5,6 +5,8 @@ const vm = require('node:vm');
 const source = fs.readFileSync(require('node:path').join(__dirname, '..', 'app', 'static', 'app.js'), 'utf8');
 const drawChartSource = source.match(/function drawChart\([\s\S]+?(?=\nfunction drawLive)/)?.[0];
 assert.ok(drawChartSource, 'drawChart function was not found');
+const internetTotalsSource = source.match(/function internetTotals\([^\n]+/)?.[0];
+assert.ok(internetTotalsSource, 'internetTotals function was not found');
 
 const context = {
   devicePixelRatio: 1.25,
@@ -13,6 +15,14 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(drawChartSource, context);
+vm.runInContext(internetTotalsSource, context);
+
+const totals = context.internetTotals([
+  { name: 'wan1', download_bps: 80, upload_bps: 20 },
+  { name: 'lan1', download_bps: 80, upload_bps: 20 },
+], new Set(['wan1']));
+assert.equal(totals.download, 80, 'LAN must not double-count Internet download');
+assert.equal(totals.upload, 20, 'LAN must not double-count Internet upload');
 
 const drawingContext = {
   scale() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, fillText() {}, fillRect() {},
